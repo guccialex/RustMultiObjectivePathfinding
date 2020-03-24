@@ -1,5 +1,5 @@
 [package]
-name = "newlib"
+name = "multiobjectivepathfinding"
 version = "0.1.0"
 authors = ["alex <alex.gusain@gmail.com>"]
 edition = "2018"

@@ -13,6 +13,11 @@ pub fn test(){
     println!("HEYfuck");
 }
 
+pub fn testme(){
+
+    println!("i am being tested, working");
+}
+
 
 
 
@@ -108,6 +113,14 @@ impl UnitClass{
     }
     
     
+}
+
+pub fn TESTTHIS(){
+
+    print!("IM BEING TESTEd");
+
+
+
 }
 
 
