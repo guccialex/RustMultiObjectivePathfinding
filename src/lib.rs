@@ -14,7 +14,7 @@ pub fn test(){
 }
 
 pub fn testme(){
-
+    
     println!("i am being tested, working");
 }
 
@@ -24,20 +24,6 @@ pub fn testme(){
 use std::collections::HashMap;
 use image::GenericImageView;
 
-pub fn main() {
-    // Use the open function to load an image from a Path.
-    // `open` returns a `DynamicImage` on success.
-    let img = image::open("cat.jpeg").unwrap();
-    
-    // The dimensions method returns the images width and height.
-    println!("dimensions {:?}", img.dimensions());
-    
-    // The color method returns the image's `ColorType`.
-    println!("{:?}", img.color());
-    
-    // Write the contents of this image to the Writer in PNG format.
-    img.save("test.png").unwrap();
-}
 
 
 pub fn createimage(){
@@ -56,9 +42,7 @@ pub fn createimage(){
 struct UnitClass{
     
     //these shouldnt be negative
-    movementvalue: f32,
-    damagevalue: f32,
-    opponentvalue: f32,
+    classvalues: HashMap<u32, f32>,
     
 }
 
@@ -67,48 +51,67 @@ impl UnitClass{
     
     fn new() -> UnitClass{
         
-        UnitClass{movementvalue: 1.0, damagevalue: 0.2, opponentvalue: 1.0}
+        //initialize the values 0 -> 100 with 0.0
+        
+        let mut theclassvalues = HashMap::new();
+        
+        for x in 0..100{
+            
+            theclassvalues.insert(x, 0.0);
+            
+        }
+        
+        UnitClass{classvalues: theclassvalues}
         
     }
     
-    //get the value given a class evulation correspondance
-    fn getunitvalue(&self, classvalues: &HashMap<u32, f32>) -> f32{
+    //add values to this unit class
+    fn addunitvalue(&mut self, classvalues: &HashMap<u32, f32>){
         
-        
-        //class values are
-        /*
-        0 is TESTING and unused
-        1 is how much it values movement
-        2 is how much it values damage
-        3 is how much it values going to an opponent
-        */
-        
-        let mut totalvalue = 0.0;
-        
+        //for each value passed in
         for (curkey, curvalue) in classvalues.iter(){
             
-            if (curkey == &1){
+            //get the corresponding classvalue for this object
+            if let Some(thisclassvalue) = self.classvalues.get_mut(curkey){
                 
-                totalvalue += self.movementvalue;
-                
-            }
-            if (curkey == &2){
-                
-                totalvalue += self.damagevalue;
+                //add the value passed in to this object
+                *thisclassvalue += curvalue;
                 
             }
-            if (curkey == &3){
-                
-                totalvalue += self.opponentvalue;
-                
+            //if its not in this obejct list, panic
+            else{
+                panic!("why cant i find you in thsi objects hashmap");
             }
             
         }
         
         
+    }
+    
+    //get the value given a class evulation correspondance
+    fn getunitvalue(&self, classevaluation: &HashMap<u32, f32>) -> f32{
+        
+        //the total value to be returned
+        let mut totalvalue = 0.0;
+        
+        //for each value passed in
+        for (curkey, curevaluation) in classevaluation.iter(){
+            
+            //get the corresponding classvalue for this object
+            if let Some(thisclassvalue) = self.classvalues.get(curkey){
+                
+                //multiply it by the evaluation passed in and add it to the total
+                totalvalue += (*thisclassvalue) * (*curevaluation);
+                
+            }
+            //if its not in this obejct list, panic
+            else{
+                panic!("why cant i find you in thsi objects hashmap");
+            }
+            
+        }
+        
         totalvalue
-        
-        
         
     }
     
@@ -116,11 +119,9 @@ impl UnitClass{
 }
 
 pub fn TESTTHIS(){
-
+    
     print!("IM BEING TESTEd");
-
-
-
+    
 }
 
 
@@ -183,15 +184,14 @@ impl VectorPathfinding{
         
         VectorPathfinding{xsize: thexsize, ysize: theysize, scale: thescale, themap: mapvector, flatmap: flatmapvector}
         
-        
     }
     
-    pub fn addobject(&mut self, isometry: Isometry2<f32>, shape: ConvexPolygon<f32>, colour: (u8,u8,u8)){
+    
+    
+    pub fn addobject(&mut self, isometry: Isometry2<f32>, shape: ConvexPolygon<f32>, shapeclassvalues: HashMap<u32, f32>){
         
         //check if each of the points intersects with the object
-        //if it does, add its colours to that point
-        
-        
+        //if it does, add its classvalues to that point
         for cury in 0..self.ysize{
             
             for curx in 0..self.xsize{
@@ -201,18 +201,61 @@ impl VectorPathfinding{
                 
                 if ( shape.contains_point(&isometry, &curpoint)){
                     
-                    //if it contains this point
-                    //colour it in
+                    
+                    self.themap[cury as usize][curx as usize].addunitvalue(&shapeclassvalues);
                     
                     
-                    //R
-                    self.flatmap[(((cury*self.ysize) + curx)*3) as usize] =  colour.0;
+                    //if it contains 1 2 or 3, use those to update the flatmap
                     
-                    //G
-                    self.flatmap[(((cury*self.ysize) + curx)*3) as usize + 1] = colour.1;
+                    //with 0.0 being 0 to 10 being 255
                     
-                    //B
-                    self.flatmap[(((cury*self.ysize) + curx)*3) as usize +2] = colour.2;
+                    if let Some(redcolour) = shapeclassvalues.get(&0){
+                        
+                        //checked addition
+                        if let Some(newvalue) = self.flatmap[(((cury*self.ysize) + curx)*3) as usize].checked_add((redcolour*80.0) as u8){
+                            
+                            self.flatmap[(((cury*self.ysize) + curx)*3) as usize] = newvalue;
+                        }
+                        else{
+                            
+                            self.flatmap[(((cury*self.ysize) + curx)*3) as usize] = 255;
+                        }
+                        
+                        
+                    }
+                    
+                    if let Some(bluecolour) = shapeclassvalues.get(&1){
+                        
+                        
+                        //checked addition
+                        if let Some(newvalue) = self.flatmap[(((cury*self.ysize) + curx)*3) as usize  + 1].checked_add((bluecolour*80.0) as u8){
+                            
+                            self.flatmap[(((cury*self.ysize) + curx)*3) as usize + 1] = newvalue;
+                        }
+                        else{
+                            
+                            self.flatmap[(((cury*self.ysize) + curx)*3) as usize + 1] = 255;
+                        }
+                        
+                        
+                        
+                    }
+                    
+                    
+                    if let Some(greencolour) = shapeclassvalues.get(&2){
+                        
+                        //checked addition
+                        if let Some(newvalue) = self.flatmap[(((cury*self.ysize) + curx)*3) as usize  + 2].checked_add((greencolour*80.0) as u8){
+                            
+                            self.flatmap[(((cury*self.ysize) + curx)*3) as usize + 2] = newvalue;
+                        }
+                        else{
+                            
+                            self.flatmap[(((cury*self.ysize) + curx)*3) as usize + 2] = 255;
+                        }
+                        
+                    }
+                    
                     
                 }
                 
@@ -220,6 +263,69 @@ impl VectorPathfinding{
             }
             
         }
+        
+        
+    }
+    
+    //add a single point to this
+    pub fn addpoint(&mut self, position: (u32, u32), shapeclassvalues: HashMap<u32, f32>){
+        
+        let cury = position.0;
+        let curx = position.1;
+        
+        self.themap[cury as usize][curx as usize].addunitvalue(&shapeclassvalues);
+        
+        
+        //if it contains 1 2 or 3, use those to update the flatmap
+        
+        //with 0.0 being 0 to 10 being 255
+        
+        if let Some(redcolour) = shapeclassvalues.get(&0){
+            
+            //checked addition
+            if let Some(newvalue) = self.flatmap[(((cury*self.ysize) + curx)*3) as usize].checked_add((redcolour*80.0) as u8){
+                
+                self.flatmap[(((cury*self.ysize) + curx)*3) as usize] = newvalue;
+            }
+            else{
+                
+                self.flatmap[(((cury*self.ysize) + curx)*3) as usize] = 255;
+            }
+            
+        }
+        
+        
+        if let Some(bluecolour) = shapeclassvalues.get(&1){
+            
+            //checked addition
+            if let Some(newvalue) = self.flatmap[(((cury*self.ysize) + curx)*3) as usize  + 1].checked_add((bluecolour*80.0) as u8){
+                
+                self.flatmap[(((cury*self.ysize) + curx)*3) as usize + 1] = newvalue;
+            }
+            else{
+                
+                self.flatmap[(((cury*self.ysize) + curx)*3) as usize + 1] = 255;
+            }
+            
+        }
+        
+        
+        
+        if let Some(greencolour) = shapeclassvalues.get(&2){
+            
+            //checked addition
+            if let Some(newvalue) = self.flatmap[(((cury*self.ysize) + curx)*3) as usize  + 2].checked_add((greencolour*80.0) as u8){
+                
+                self.flatmap[(((cury*self.ysize) + curx)*3) as usize + 2] = newvalue;
+            }
+            else{
+                
+                self.flatmap[(((cury*self.ysize) + curx)*3) as usize + 2] = 255;
+            }
+            
+        }
+        
+        
         
         
     }
@@ -237,45 +343,37 @@ impl VectorPathfinding{
         
     }
     
+    pub fn drawpath(&self, pathlist: Vec<(u32, u32)>, imagename: &str){
+        
+        //get a copy of the current flatmap buffer
+        
+        let mut flatmapcopy =  self.flatmap.clone();
+
+        //add on top of it, all the nodes that are in the path
+        
+        for currentpathnode in pathlist{
+            
+            let cury = currentpathnode.0;
+
+            let curx = currentpathnode.1;
+            
+            
+            flatmapcopy[(((cury*self.ysize) + curx)*3) as usize + 0] = 255;
+            flatmapcopy[(((cury*self.ysize) + curx)*3) as usize + 1] = 255;
+            flatmapcopy[(((cury*self.ysize) + curx)*3) as usize + 2] = 255;
+            
+            
+            
+        }
+
+        image::save_buffer("exporting/".to_owned()+&imagename.to_owned()+&".png".to_owned(), &flatmapcopy, self.xsize, self.ysize, image::ColorType::Rgb8).unwrap()
+        
+        
+        
+    }
+    
     //get the next move the object passed in should make
-    pub fn getdirection(&self, xandypos: (u32,u32), classvalues: HashMap<u32, f32>){
-        
-        //get the position of something and how much it values each object by class
-        
-        
-        /*
-        
-        an object wants to move towards a goal if the path to the goal
-        with its class weights is positive
-        
-        so, start off on every positive goal in the plane
-        
-        then, get each path to that goal
-        
-        and keep going, until that path becomes zero or negative
-        
-        (because if zero or negative, an object in that position with that cost weightings wouldnt bother moving)
-        
-        
-        so start at each positive goal value
-        
-        recursively, for each directions you can move away from that object, subtract the cost of moving away
-        and do that for that goal until you have a negative or zero value
-        
-        and then do that for all the goals
-        
-        //get a list of all the nodes visited
-        //go away from that node, all the positions you can move to from that node
-        //
-        
-        
-        */
-        
-        
-        
-        
-        //if the node has been visited (if not instantiated, means it hasnt been visited)
-        let listofnodesvisited: HashMap<(u32, u32), bool> = HashMap::new();
+    pub fn getdirection(&self, xandypos: (u32,u32), classvalues: HashMap<u32, f32>) -> Option<Vec<(u32,u32)>>{
         
         
         //get the class values
@@ -289,8 +387,6 @@ impl VectorPathfinding{
             if (currentvalue > &0.0)
             {
                 listofgoals.insert(*currentgoal, *currentvalue);
-                
-                
             }
             //if its a zero or anti value
             else
@@ -301,46 +397,215 @@ impl VectorPathfinding{
             
         }
         
+        let mut listofgoalnodepos = Vec::new();
         
-        //a map of the combined values given the objects inside and the goal values
+        
+        //build a nodemap, a map that summarizes how much this object values each point
         let mut thenodemap: HashMap<(u32, u32), PathNode> = HashMap::new();
         
-
         //for every node in the map
         for cury in 0..self.ysize{
             
             for curx in 0..self.xsize{
-
-                let theunitvalue = self.themap[cury as usize][curx as usize].getunitvalue(&classvalues);
-
+                
+                
+                let mut theunitvalue = self.themap[cury as usize][curx as usize].getunitvalue(&classvalues);
+                
+                //if it is positive, add this node to the list of goals
+                if (theunitvalue > 0.1){
+                    listofgoalnodepos.push((cury, curx));                
+                }
+                
+                
+                //create a new pathnode
                 let thecurrentnode = PathNode::new(theunitvalue);
-
+                
+                //add it to the map of paths im making
                 thenodemap.insert( (cury, curx) , thecurrentnode );
                 
+                
+                
             }
-            
             
         }
         
         
         
+        println!("{:?}", self.ysize);
+        
+        //for each goal node
+        for currentgoalpos in listofgoalnodepos{
+            
+            let thestartnodepos = xandypos;
+            
+            let thegoalnodepos = currentgoalpos;
+            
+            //get the node in the position of the goal node
+            if let Some(goalnode) = thenodemap.get_mut(&thegoalnodepos){
+                
+                //update its path value
+                goalnode.updatepathvalue( goalnode.getselfvalue(), (10000, 10000));
+
+                //update the path it gets its path from to zero
+                goalnode.nodethatgavepath = None;
+                
+            }
+            
+            
+            //the vector to return
+            
+            let mut pathtoreturn: Vec<(u32,u32)> = Vec::new();
+            
+            //run the path finder
+            if let Some(mypath) = getpath (&mut thenodemap, thestartnodepos, thegoalnodepos){
+                
+                
+                //for that path
+                //try to reconstruct the path
+                
+                let mut stillrunning = true;
+                
+                let mut currentnodepos = thestartnodepos;
+                
+                let mut curcount = 0;
+                
+                while (stillrunning){
+                    
+                    curcount += 1;
+                    
+                    if (curcount >= 1000){
+                        stillrunning = false;
+                    }
+                    
+                    //print the position of this node
+                    println!("{:?}", currentnodepos);
+                    
+                    pathtoreturn.push(currentnodepos);
+                    
+                    
+                    
+                    //get this node
+                    if let Some(curnode) = thenodemap.get(&currentnodepos){
+                        
+                        //get the position it got its path from
+                        if let Some(prevnode) = curnode.nodethatgavepath{
+                            
+                            print!("{:?}", curnode);
+                            
+                            //update this node to that one
+                            currentnodepos = prevnode;
+                            
+                            
+                        }
+                        //else if this is the progenitor node, stop running
+                        else{
+                            stillrunning = false;
+                        }
+                        
+                    }
+                    else{
+                        
+                        //this means the current node is the nonesense one that the goal points to
+                        stillrunning = false;
+                        //panic!("if i cant get it, it should be done..");
+                    }
+                    
+                    
+                    
+                }
+                
+                return(Some(pathtoreturn));
+                
+                
+                
+            }
+            
+            
+        }
+        None
+        
+        /*
         //get the ideal path to the goals
-
-        let thestartnode = (1,1);
         
-        let thegoalnode = (10,10);
-
-        let mypath = getpath (&mut thenodemap, thestartnode, thegoalnode);
+        let thestartnode = (0,0);
+        let thegoalnode = (20,60);
+        
+        //TESTING THING
+        //make the selfvalue and pathnode at the startnode higher
+        
+        let mut nodetoadd = PathNode::new(100.0);
+        nodetoadd.updatepathvalue(100.0, (100000,100000));
+        //nodetoadd.adjacentnodesrun = true;
+        
+        thenodemap.insert(thegoalnode, nodetoadd);
+        
+        if let Some(mypath) = getpath (&mut thenodemap, thestartnode, thegoalnode){
+            
+            
+            
+            
+            //for that path
+            //try to reconstruct the path
+            
+            let mut stillrunning = true;
+            
+            let mut currentnodepos = thestartnode;
+            
+            let mut curcount = 0;
+            
+            while (stillrunning){
+                
+                curcount += 1;
+                
+                if (curcount >= 1000){
+                    stillrunning = false;
+                }
+                
+                //print the position of this node
+                println!("{:?}", currentnodepos);
+                
+                
+                
+                //get this node
+                if let Some(curnode) = thenodemap.get(&currentnodepos){
+                    
+                    //get the position it got its path from
+                    if let Some(prevnode) = curnode.nodethatgavepath{
+                        
+                        print!("{:?}", curnode);
+                        
+                        //update this node to that one
+                        currentnodepos = prevnode;
+                        
+                        
+                    }
+                    //else if this is the progenitor node, stop running
+                    else{
+                        stillrunning = false;
+                    }
+                    
+                }
+                else{
+                    
+                    //this means the current node is the nonesense one that the goal points to
+                    stillrunning = false;
+                    //panic!("if i cant get it, it should be done..");
+                }
+                
+                
+                
+            }
+            
+        }
+        
+        */
+        
+        
+        //return the path taken
         
         
         
         
-        //doing it recursively
-        //pass in
-        //1: a mutable reference to nodes visited
-        //2: the node i want to check
-        //3: the current value of the things leading to it
-        //4: then call this function on all the other ones
         
     }
 }
@@ -353,6 +618,10 @@ struct PathNode{
     //inclusive
     pathvalue: f32,
     
+    //if this was given a pathvalue, the last node that gave this one a path
+    //used so that a traceback of the path taken to reach the start from the goal can be found
+    nodethatgavepath: Option<(u32,u32)>,
+    
     //the valued objects that this object already visited
     //means dont GAIN the value that this pathvalue has when you visit it again (this should really be "dont increase its value from the value increasign thing again")
     //("but still have it decreased by the decreasing value things about that tile, but i cant actually do that")
@@ -360,16 +629,15 @@ struct PathNode{
     //the value that this node imparts
     selfvalue: f32,
     
-    
     //if this, with its highest path acheived has already run on all its adjacent nodes
     adjacentnodesrun: bool,
 }
 
 impl PathNode{
     
-    fn new(selfvalue: f32) -> PathNode{
+    fn new(theselfvalue: f32) -> PathNode{
         
-        PathNode{pathvalue: 0.0, selfvalue: 0.0, adjacentnodesrun: false}
+        PathNode{pathvalue: 0.0, selfvalue: theselfvalue, adjacentnodesrun: false, nodethatgavepath: None}
         
     }
     
@@ -383,9 +651,11 @@ impl PathNode{
         self.pathvalue
     }
     
-    fn updatepathvalue(&mut self, newpathvalue: f32){
+    //get the new pathvalue, and the nodepos that this pathvalue came from
+    fn updatepathvalue(&mut self, newpathvalue: f32, givernodepos: (u32, u32) ){
         
         self.pathvalue = newpathvalue;
+        self.nodethatgavepath = Some(givernodepos);
         
     }
     
@@ -396,38 +666,23 @@ impl PathNode{
 
 
 
-fn getpath(nodemap: &mut HashMap<(u32,u32),PathNode> , startnode: (u32, u32), goalnode: (u32, u32) ) -> PathNode{
+fn getpath(nodemap: &mut HashMap<(u32,u32),PathNode> , startnode: (u32, u32), goalnode: (u32, u32) ) -> Option<PathNode>{
     
     
-    //TODO: stop running if the values got negative
+    //TODO: stop running that path if the values get negative
     
     
-    //the list nodes in order of lowest value node to highest value node
-    //add the current node and its value to the stackofnodes list
-    
-    //pop the highest value node
-    //the highest value node SHOULD always be the highest POSSIBLE value that that node can have (it SHOULD be IF there are no ways to INCREASE value, instead of only decrease)
-    //well maybe this is the way to have it work with the "highest possible value" thing, because if it increases value, it shouldnt increase it twice
-    //
-    //so it should then be pushed onto the "highestvalueacheived" node
-    //how the fuck do i do this when values can increase?
+    //a hashmap of 
+    //another map that sorts objects by ( )
     
     
-    //values passed in
-    /*
-    startnode
-    goalnode
-    nodemap
-    
-    */
-    
-    
+    //the value to return
     let mut nodewithpath: PathNode;
     
     
+    println!("it started at leasst");
     
-    
-    for curiter in 0..1000
+    for curiter in 0..400000
     {
         
         //get the node with the highest value
@@ -435,12 +690,17 @@ fn getpath(nodemap: &mut HashMap<(u32,u32),PathNode> , startnode: (u32, u32), go
         let mut highestnode: &mut PathNode = &mut Default::default();
         let mut highestnodekey: & (u32, u32) = &(10000,10000);
         
+        //print!("i am of size{:?}", nodemap.len());
+        
         for (curkey, curnode) in nodemap.iter_mut(){
+            
             
             //if the current node hasnt already been run on its adjacent nodes with its highest value
             if (curnode.adjacentnodesrun == false){
                 
                 if (curnode.getpathvalue() > highestpathvalue){
+                    
+                    
                     
                     //set the highest value to the highest value seen so far
                     highestpathvalue = curnode.getpathvalue();
@@ -455,37 +715,64 @@ fn getpath(nodemap: &mut HashMap<(u32,u32),PathNode> , startnode: (u32, u32), go
             }
             
         }
-
-
-        //if these values are uninitialized, which they should be, panic, so that the compiler works
         
         
         //set this nodes "adjacentnodesrun" as true
         highestnode.adjacentnodesrun = true;
         
+        
+        //if the highestnodekey hasnt changed, panic
+        if (highestnodekey == &(10000 as u32, 10000 as u32)){
+            println!("the object has not been reached in {} iterations, before having its value to run to drop to zero",curiter );
+            
+            return(None)
+        }
+        
+        
+        //println!("{:?}", highestnode);
+        //println!("{:?}", highestnodekey);
+        
+        
+        //println!("{:?}", highestnode);
+        
         //get a copy of the highest node so i can iterate through the nodemap again and still have this value
         let highestnodecopy = highestnode.clone();
         
-
-
-        //if this is the start node, it means that this is the highest value for the start node acheived
+        let highestnodekey = &highestnodekey.clone();
+        
+        
+        
+        //if this is the start node, it means that this is the highest value path to the start node possible
         //and so, break and return the node that has the path
         if  (highestnodekey == &startnode){
             
+            println!("i found a path, it took {} iterations",curiter );
+            
             //return that start node with the highest path value
-            //(*highestnode).clone()
-
+            return(Some((*highestnode).clone()))
+            
         }
-        
         
         
         
         //get the nodes this node is attached to
         let mut connectednodes = Vec::new();
-        connectednodes.push((highestnodekey.0 - 1 , highestnodekey.1));
         connectednodes.push((highestnodekey.0 , highestnodekey.1 + 1));
         connectednodes.push((highestnodekey.0 + 1 , highestnodekey.1));
-        connectednodes.push((highestnodekey.0 , highestnodekey.1 - 1));
+        
+        //check if these are gonna overflow to under zero
+        if let Some(newsouthy) = highestnodekey.0.checked_sub(1){
+            
+            connectednodes.push((newsouthy , highestnodekey.1));
+            
+        }
+        
+        if let Some(newwestx) = highestnodekey.1.checked_sub(1){
+            
+            connectednodes.push((highestnodekey.0 , newwestx));
+            
+        }
+        
         
         
         //check if these nodes are valid
@@ -500,24 +787,32 @@ fn getpath(nodemap: &mut HashMap<(u32,u32),PathNode> , startnode: (u32, u32), go
                 
                 //if this pathvalue is higher than its current pathvalue
                 //update its pathvalue
+                //this WILL fuck up and set the goal to point to the second node and the
+                //second node to point to the goal
                 if (newpathvalue > existingnode.pathvalue){
-                    existingnode.updatepathvalue(newpathvalue);
+                    
+                    //so if the connected node is equal to the goal, just dont do it
+                    if (connectednode == goalnode){
+                        
+                        
+                    }
+                    else{
+                        //push the node that gave it this value
+                        existingnode.updatepathvalue(newpathvalue, *highestnodekey);
+                    }
                 }
                 
             }
             
         }
-
-
+        
+        
         
     }
-
-    let myreturn = PathNode::new(10.0);
-
-
-    myreturn
     
+    //this SHOULDNT run
     
+    panic!("if no path was found it should be found out before me");
     
     
 }
@@ -601,14 +896,10 @@ impl Pos {
 
 pub fn pathfindingtest(){
     
-    
-    
     static GOAL: Pos = Pos(4, 6);
     let result = astar(&Pos(1, 1), |g| g.successors(), |g| g.distance(&GOAL) / 3,|g| *g == GOAL);
     
     print!("{:?}",result);
-    
-    
     
 }
 
